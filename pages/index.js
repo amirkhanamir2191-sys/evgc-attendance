@@ -4,6 +4,7 @@ export default function Home() {
   const [step, setStep] = useState('entry');
   const [loginId, setLoginId] = useState('');
   const [email, setEmail] = useState('');
+  const [emailErr, setEmailErr] = useState('');
   const [status, setStatus] = useState('');
   const [statusType, setStatusType] = useState('');
   const [participant, setParticipant] = useState(null);
@@ -26,6 +27,12 @@ export default function Home() {
   }
 
   async function confirm() {
+    // Validate email for check-in
+    if (nextAction === 'checkin') {
+      if (!email.trim()) { setEmailErr('Email ID is required.'); return; }
+      if (!/^[^@]+@[^@]+\.[^@]+$/.test(email.trim())) { setEmailErr('Please enter a valid email address.'); return; }
+    }
+    setEmailErr('');
     setLoading(true); setMsg('Fetching your location...', 'pending');
     if (!navigator.geolocation) { setMsg('Browser does not support location.', 'error'); setLoading(false); return; }
     navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -44,7 +51,7 @@ export default function Home() {
   }
 
   function startOver() {
-    setStep('entry'); setLoginId(''); setEmail(''); setParticipant(null); setMsg('', '');
+    setStep('entry'); setLoginId(''); setEmail(''); setEmailErr(''); setParticipant(null); setMsg('', '');
     setTimeout(() => inputRef.current?.focus(), 100);
   }
 
@@ -70,10 +77,13 @@ export default function Home() {
 
           {step === 'verify' && nextAction !== 'wrongday' && nextAction !== 'complete' && (<>
             {nextAction === 'checkin' && (
-              <div style={styles.emailBox}>
-                <label style={styles.emailLabel}>Your Email ID <span style={{color:'#94a3b8'}}>(optional)</span></label>
-                <input style={styles.emailInput} type="email" placeholder="yourname@gmail.com"
-                  value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
+              <div style={{...styles.emailBox, borderColor: emailErr ? '#fca5a5' : '#e2e8f0'}}>
+                <label style={styles.emailLabel}>Email ID <span style={{color:'#ef4444'}}>*</span></label>
+                <input style={{...styles.emailInput, borderColor: emailErr ? '#f87171' : '#cbd5e1'}}
+                  type="email" placeholder="yourname@gmail.com"
+                  value={email} onChange={e => { setEmail(e.target.value); setEmailErr(''); }}
+                  autoComplete="email" />
+                {emailErr && <p style={{color:'#ef4444', fontSize:12, margin:'6px 0 0', fontWeight:600}}>{emailErr}</p>}
               </div>
             )}
             <button style={styles.btn} onClick={confirm} disabled={loading}>{loading ? 'Processing...' : actionLabel}</button>
@@ -122,8 +132,8 @@ const styles = {
   detailRow: { display:'flex', justifyContent:'space-between', gap:12, padding:'5px 0', borderBottom:'1px solid #ebeef2' },
   detailLabel: { color:'#888', flexShrink:0 },
   detailValue: { fontWeight:600, textAlign:'right' },
-  emailBox: { background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:10, padding:'12px 14px', marginBottom:12, textAlign:'left' },
-  emailLabel: { display:'block', fontSize:13, fontWeight:600, color:'#475569', marginBottom:6 },
-  emailInput: { width:'100%', padding:'10px 12px', fontSize:14, border:'1px solid #cbd5e1', borderRadius:8, boxSizing:'border-box' },
+  emailBox: { background:'#f8fafc', border:'1px solid', borderRadius:10, padding:'12px 14px', marginBottom:12, textAlign:'left' },
+  emailLabel: { display:'block', fontSize:13, fontWeight:700, color:'#1e293b', marginBottom:6 },
+  emailInput: { width:'100%', padding:'10px 12px', fontSize:14, border:'1px solid', borderRadius:8, boxSizing:'border-box' },
   status: { marginTop:14, fontSize:14, lineHeight:1.5, fontWeight:600 },
 };
