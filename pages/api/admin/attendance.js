@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/supabase';
+import { supabase, supabaseAdmin } from '../../../lib/supabase';
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
@@ -11,9 +11,16 @@ export default async function handler(req, res) {
     if (error) return res.status(500).json({ success: false, message: error.message });
     return res.json({ success: true, data });
   }
+  if (req.method === 'PUT') {
+    const { id, ...updates } = req.body;
+    if (!id) return res.status(400).json({ success: false, message: 'Missing id' });
+    const { error } = await supabaseAdmin.from('attendance').update(updates).eq('id', id);
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    return res.json({ success: true });
+  }
   if (req.method === 'DELETE') {
     const { id } = req.query;
-    const { error } = await supabase.from('attendance').delete().eq('id', id);
+    const { error } = await supabaseAdmin.from('attendance').delete().eq('id', id);
     if (error) return res.status(500).json({ success: false, message: error.message });
     return res.json({ success: true });
   }
