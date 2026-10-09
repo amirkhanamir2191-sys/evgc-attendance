@@ -13,6 +13,7 @@ export default function Admin() {
   const [attendance, setAttendance] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [batch, setBatch] = useState('all');
+  const [cycle, setCycle] = useState(2);
   const [date, setDate] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,7 +26,7 @@ export default function Admin() {
 
   // Check auth status on load
   useEffect(() => {
-    fetch('/api/admin/attendance?batch=none').then(r => {
+    fetch('/api/admin/attendance?cycle=${cycle}&batch=none').then(r => {
       if (r.status === 401) setAuthed(false);
       else setAuthed(true);
     }).catch(() => setAuthed(false));
@@ -57,7 +58,7 @@ export default function Admin() {
     if (r.status === 401) { setAuthed(false); return; }
     const d = await r.json();
     setAttendance(d.data || []); setLoading(false);
-  }, [batch, date, search]);
+  }, [cycle, batch, date, search]);
 
   const loadParticipants = useCallback(async () => {
     setLoading(true);
@@ -68,7 +69,7 @@ export default function Admin() {
     if (r.status === 401) { setAuthed(false); return; }
     const d = await r.json();
     setParticipants(d.data || []); setLoading(false);
-  }, [batch, search]);
+  }, [cycle, batch, search]);
 
   useEffect(() => {
     if (!authed) return;
@@ -391,4 +392,8 @@ const S = {
   modalBtns:{display:'flex',gap:8,marginTop:16},
   saveBtn:{flex:1,padding:12,background:'#2563eb',color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:15},
   cancelBtn:{flex:1,padding:12,background:'#f1f5f9',color:'#555',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:15},
-};
+}<select style={S.select} value={cycle} onChange={e => { setCycle(Number(e.target.value)); }}>
+            <option value={1}>Cycle 1 (Sept)</option>
+            <option value={2}>Cycle 2 (Oct)</option>
+          </select>
+          ;
