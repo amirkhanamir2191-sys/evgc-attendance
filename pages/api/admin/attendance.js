@@ -1,7 +1,5 @@
 import { supabase, supabaseAdmin } from '../../../lib/supabase';
 
-const ADMIN_USER = process.env.ADMIN_USERNAME || 'evgb_scert';
-const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'ranjishm';
 const CURRENT_CYCLE = 2;
 
 function parseCookies(cookieHeader) {
@@ -16,7 +14,7 @@ function parseCookies(cookieHeader) {
 
 function checkAuth(req) {
   const cookies = parseCookies(req.headers.cookie);
-  return cookies.admin_auth === Buffer.from(ADMIN_USER + ':' + ADMIN_PASS).toString('base64');
+  return cookies.admin_auth === '1';
 }
 
 export default async function handler(req, res) {
