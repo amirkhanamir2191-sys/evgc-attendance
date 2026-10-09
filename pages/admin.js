@@ -77,7 +77,7 @@ export default function Admin() {
     else loadParticipants();
   }, [authed, tab, batch, date, search]);
 
-  const fmt = (t) => t ? new Date(t).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : 'â';
+  const fmt = (t) => t ? new Date(t).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Ã¢ÂÂ';
 
   const exportCSV = () => {
     const rows = tab === 'attendance' ? attendance : participants;
@@ -135,7 +135,7 @@ export default function Admin() {
     <div style={{minHeight:'100vh', background:'#0f172a', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif'}}>
       <div style={{background:'#fff', borderRadius:20, padding:40, width:'100%', maxWidth:380, boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
         <div style={{textAlign:'center', marginBottom:28}}>
-          <div style={{fontSize:48, marginBottom:8}}>ð</div>
+          <div style={{fontSize:48, marginBottom:8}}>Ã°ÂÂÂ</div>
           <h1 style={{fontSize:20, margin:0, color:'#1e293b'}}>Admin Login</h1>
           <p style={{fontSize:13, color:'#64748b', margin:'6px 0 0'}}>EVGC Attendance Dashboard</p>
         </div>
@@ -164,11 +164,11 @@ export default function Admin() {
     <div style={S.page}>
       <div style={S.header}>
         <div>
-          <h1 style={S.h1}>EVGC Attendance â Admin Dashboard</h1>
-          <p style={S.sub}>Vidya Samiksha Auditorium Â· Cycle 2 · 12–16 Oct 2026</p>
+          <h1 style={S.h1}>EVGC Attendance Ã¢ÂÂ Admin Dashboard</h1>
+          <p style={S.sub}>Vidya Samiksha Auditorium ÃÂ· Cycle 2 Â· 12â16 Oct 2026</p>
         </div>
         <div style={{display:'flex', gap:12, alignItems:'center'}}>
-          <a href="/" style={S.backBtn}>â Check-in Page</a>
+          <a href="/" style={S.backBtn}>Ã¢ÂÂ Check-in Page</a>
           <button onClick={logout} style={{...S.backBtn, background:'#ef4444', cursor:'pointer', border:'none'}}>Logout</button>
         </div>
       </div>
@@ -193,12 +193,16 @@ export default function Admin() {
           ))}
         </div>
         <div style={S.filters}>
-          <select style={S.select} value={batch} onChange={e => setBatch(e.target.value)}>
+          <select style={S.select} value={cycle} onChange={e => setCycle(Number(e.target.value))}>
+              <option value={1}>Cycle 1 (Sept)</option>
+              <option value={2}>Cycle 2 (Oct)</option>
+            </select>
+            <select style={S.select} value={batch} onChange={e => setBatch(e.target.value)}>
             {BATCHES.map(b => <option key={b} value={b}>{b==='all'?'All Batches':b}</option>)}
           </select>
           {tab==='attendance' && <input type="date" style={S.select} value={date} onChange={e => setDate(e.target.value)} />}
           <input style={S.searchInput} placeholder="Search name / ID / school..." value={search} onChange={e => setSearch(e.target.value)} />
-          <button style={S.exportBtn} onClick={exportCSV}>â¬ Export CSV</button>
+          <button style={S.exportBtn} onClick={exportCSV}>Ã¢Â¬Â Export CSV</button>
           {tab==='participants' && <button style={S.addBtn} onClick={() => setShowAddP(true)}>+ Add</button>}
         </div>
       </div>
@@ -212,20 +216,20 @@ export default function Admin() {
                 {attendance.map(a => (
                   <tr key={a.id} style={S.tr}>
                     <td style={S.td}><strong>{a.name}</strong></td>
-                    <td style={S.td}>{a.evgc_id||'â'}</td>
-                    <td style={S.td}>{a.email||'â'}</td>
+                    <td style={S.td}>{a.evgc_id||'Ã¢ÂÂ'}</td>
+                    <td style={S.td}>{a.email||'Ã¢ÂÂ'}</td>
                     <td style={{...S.td,maxWidth:160,overflow:'hidden',textOverflow:'ellipsis'}}>{a.school_name}</td>
                     <td style={S.td}>{a.district}</td>
                     <td style={S.td}>{a.batch}</td>
                     <td style={S.td}><span style={{color:a.checkin_time?'#128a3e':'#999'}}>{fmt(a.checkin_time)}</span></td>
                     <td style={S.td}><span style={{color:a.checkout_time?'#7c3aed':'#999'}}>{fmt(a.checkout_time)}</span></td>
-                    <td style={S.td}>{a.checkin_distance_m!=null?a.checkin_distance_m+'m':'â'}</td>
+                    <td style={S.td}>{a.checkin_distance_m!=null?a.checkin_distance_m+'m':'Ã¢ÂÂ'}</td>
                     <td style={{...S.td,whiteSpace:'nowrap'}}>
-                      <button style={S.editBtn} onClick={()=>setEditA({...a})}>âï¸</button>
-                      {a.checkin_time&&!a.checkout_time&&<button style={S.checkoutBtn} onClick={()=>markCheckout(a)}>âOut</button>}
-                      {a.checkin_time&&<button style={S.unmarkBtn} onClick={()=>unmarkCheckin(a)}>âIn</button>}
-                      {a.checkout_time&&<button style={S.unmarkBtn} onClick={()=>unmarkCheckout(a)}>âOut</button>}
-                      <button style={S.delBtn} onClick={()=>deleteAttendance(a.id)}>ð</button>
+                      <button style={S.editBtn} onClick={()=>setEditA({...a})}>Ã¢ÂÂÃ¯Â¸Â</button>
+                      {a.checkin_time&&!a.checkout_time&&<button style={S.checkoutBtn} onClick={()=>markCheckout(a)}>Ã¢ÂÂOut</button>}
+                      {a.checkin_time&&<button style={S.unmarkBtn} onClick={()=>unmarkCheckin(a)}>Ã¢ÂÂIn</button>}
+                      {a.checkout_time&&<button style={S.unmarkBtn} onClick={()=>unmarkCheckout(a)}>Ã¢ÂÂOut</button>}
+                      <button style={S.delBtn} onClick={()=>deleteAttendance(a.id)}>Ã°ÂÂÂ</button>
                     </td>
                   </tr>
                 ))}
@@ -243,16 +247,16 @@ export default function Admin() {
                 {participants.map(p => (
                   <tr key={p.id} style={S.tr}>
                     <td style={S.td}><strong>{p.name}</strong></td>
-                    <td style={S.td}>{p.evgc_id||'â'}</td>
-                    <td style={S.td}>{p.school_id||'â'}</td>
+                    <td style={S.td}>{p.evgc_id||'Ã¢ÂÂ'}</td>
+                    <td style={S.td}>{p.school_id||'Ã¢ÂÂ'}</td>
                     <td style={{...S.td,maxWidth:160,overflow:'hidden',textOverflow:'ellipsis'}}>{p.school_name}</td>
                     <td style={S.td}>{p.district}</td>
                     <td style={S.td}>{p.zone}</td>
                     <td style={S.td}>{p.batch}</td>
                     <td style={S.td}>{p.post_type}</td>
                     <td style={{...S.td,whiteSpace:'nowrap'}}>
-                      <button style={S.editBtn} onClick={()=>setEditP({...p})}>âï¸ Edit</button>
-                      <button style={S.delBtn} onClick={()=>deleteParticipant(p.id)}>ð</button>
+                      <button style={S.editBtn} onClick={()=>setEditP({...p})}>Ã¢ÂÂÃ¯Â¸Â Edit</button>
+                      <button style={S.delBtn} onClick={()=>deleteParticipant(p.id)}>Ã°ÂÂÂ</button>
                     </td>
                   </tr>
                 ))}
@@ -392,8 +396,4 @@ const S = {
   modalBtns:{display:'flex',gap:8,marginTop:16},
   saveBtn:{flex:1,padding:12,background:'#2563eb',color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:15},
   cancelBtn:{flex:1,padding:12,background:'#f1f5f9',color:'#555',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:15},
-}<select style={S.select} value={cycle} onChange={e => { setCycle(Number(e.target.value)); }}>
-            <option value={1}>Cycle 1 (Sept)</option>
-            <option value={2}>Cycle 2 (Oct)</option>
-          </select>
-          ;
+};
