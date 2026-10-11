@@ -1,10 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const BATCHES = ['all','Batch 1','Batch 2','Batch 3','Batch 4','Batch 5'];
-const batchDateMap = {'Batch 1':['15th September 2026','2026-09-15'],'Batch 2':['16th September 2026','2026-09-16'],'Batch 3':['17th September 2026','2026-09-17'],'Batch 4':['18th September 2026','2026-09-18'],'Batch 5':['19th September 2026','2026-09-19']};
+const batchDateMap = {
+  1: {'Batch 1':['15th September 2026','2026-09-15'],'Batch 2':['16th September 2026','2026-09-16'],'Batch 3':['17th September 2026','2026-09-17'],'Batch 4':['18th September 2026','2026-09-18'],'Batch 5':['19th September 2026','2026-09-19']},
+  2: {'Batch 1':['12th October 2026','2026-10-12'],'Batch 2':['13th October 2026','2026-10-13'],'Batch 3':['14th October 2026','2026-10-14'],'Batch 4':['15th October 2026','2026-10-15'],'Batch 5':['16th October 2026','2026-10-16']},
+};
+const cycleInfo = {
+  1: { label: 'Cycle 1', dates: '15–19 Sep 2026', month: 'September 2026' },
+  2: { label: 'Cycle 2', dates: '12–16 Oct 2026', month: 'October 2026' },
+};
 
 export default function Admin() {
   const [authed, setAuthed] = useState(null);
+  const [cycleSelected, setCycleSelected] = useState(null); // null = not yet chosen
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginErr, setLoginErr] = useState('');
@@ -36,14 +44,14 @@ export default function Admin() {
     setLoginLoading(true); setLoginErr('');
     const r = await fetch('/api/auth', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
     const d = await r.json();
-    if (d.success) { setAuthed(true); }
+    if (d.success) { setAuthed(true); setCycleSelected(null); }
     else { setLoginErr(d.message || 'Invalid credentials.'); }
     setLoginLoading(false);
   };
 
   const logout = async () => {
     await fetch('/api/auth', { method: 'DELETE' });
-    setAuthed(false); setUsername(''); setPassword('');
+    setAuthed(false); setCycleSelected(null); setUsername(''); setPassword('');
   };
 
   const notify = (m, type='success') => { setMsg(m); setMsgType(type); setTimeout(() => setMsg(''), 3000); };
@@ -74,10 +82,10 @@ export default function Admin() {
   }, [cycle, batch, search]);
 
   useEffect(() => {
-    if (!authed) return;
+    if (!authed || !cycleSelected) return;
     if (tab === 'attendance') loadAttendance();
     else loadParticipants();
-  }, [authed, tab, batch, date, search]);
+  }, [authed, cycleSelected, cycle, tab, batch, date, search]);
 
   const fmt = (t) => t ? new Date(t).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
 
@@ -125,7 +133,7 @@ export default function Admin() {
   };
   const addParticipant = async () => {
     if (!newP.name) return notify('Name is required','error');
-    await fetch('/api/admin/participants', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(newP) });
+    await fetch('/api/admin/participants', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({...newP, cycle}) });
     setShowAddP(false); notify('Added'); loadParticipants();
   };
 
@@ -162,15 +170,46 @@ export default function Admin() {
 
   if (authed === null) return <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,color:'#666'}}>Loading...</div>;
 
+  // --- CYCLE SELECTION SCREEN ---
+  if (authed === true && !cycleSelected) return (
+    <div style={{minHeight:'100vh', background:'linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif'}}>
+      <div style={{background:'#fff', borderRadius:24, padding:48, width:'100%', maxWidth:480, boxShadow:'0 24px 80px rgba(0,0,0,0.35)', textAlign:'center'}}>
+        <div style={{fontSize:52, marginBottom:10}}>📋</div>
+        <h1 style={{fontSize:22, margin:'0 0 6px', color:'#1e293b', fontWeight:800}}>EVGC Attendance</h1>
+        <p style={{fontSize:14, color:'#64748b', margin:'0 0 36px'}}>Select a training cycle to continue</p>
+        <div style={{display:'flex', flexDirection:'column', gap:16}}>
+          {[1, 2].map(c => (
+            <button key={c} onClick={() => { setCycleSelected(c); setCycle(c); }} style={{
+              padding:'20px 24px', borderRadius:14, border:'2px solid #e2e8f0',
+              background:c===1?'#eff6ff':'#f0fdf4', cursor:'pointer', textAlign:'left',
+              transition:'all .15s', display:'flex', alignItems:'center', gap:16,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = c===1?'#2563eb':'#16a34a'; e.currentTarget.style.boxShadow='0 4px 20px rgba(0,0,0,0.12)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow='none'; }}>
+              <div style={{fontSize:32}}>{c===1?'🗓️':'📅'}</div>
+              <div>
+                <div style={{fontSize:17, fontWeight:700, color:'#1e293b'}}>{cycleInfo[c].label}</div>
+                <div style={{fontSize:13, color:'#64748b', marginTop:3}}>Vidya Samiksha Auditorium · {cycleInfo[c].dates}</div>
+              </div>
+              <div style={{marginLeft:'auto', fontSize:20, color:'#94a3b8'}}>→</div>
+            </button>
+          ))}
+        </div>
+        <button onClick={logout} style={{marginTop:24, background:'none', border:'none', color:'#94a3b8', fontSize:13, cursor:'pointer', textDecoration:'underline'}}>Logout</button>
+      </div>
+    </div>
+  );
+
   return (
     <div style={S.page}>
       <div style={S.header}>
         <div>
           <h1 style={S.h1}>EVGC Attendance — Admin Dashboard</h1>
-          <p style={S.sub}>Vidya Samiksha Auditorium · Cycle 2 · 12–16 Oct 2026</p>
+          <p style={S.sub}>Vidya Samiksha Auditorium · {cycleInfo[cycle].label} · {cycleInfo[cycle].dates}</p>
         </div>
         <div style={{display:'flex', gap:12, alignItems:'center'}}>
           <a href="/" style={S.backBtn}>← Check-in Page</a>
+          <button onClick={() => setCycleSelected(null)} style={{...S.backBtn, background:'#7c3aed', cursor:'pointer', border:'none'}}>⇄ Cycles</button>
           <button onClick={logout} style={{...S.backBtn, background:'#ef4444', cursor:'pointer', border:'none'}}>Logout</button>
         </div>
       </div>
@@ -195,11 +234,7 @@ export default function Admin() {
           ))}
         </div>
         <div style={S.filters}>
-          <select style={S.select} value={cycle} onChange={e => setCycle(Number(e.target.value))}>
-              <option value={1}>Cycle 1 (Sept)</option>
-              <option value={2}>Cycle 2 (Oct)</option>
-            </select>
-            <select style={S.select} value={batch} onChange={e => setBatch(e.target.value)}>
+          <select style={S.select} value={batch} onChange={e => setBatch(e.target.value)}>
             {BATCHES.map(b => <option key={b} value={b}>{b==='all'?'All Batches':b}</option>)}
           </select>
           {tab==='attendance' && <input type="date" style={S.select} value={date} onChange={e => setDate(e.target.value)} />}
@@ -314,7 +349,7 @@ export default function Admin() {
               ))}
               <div style={S.formRow}>
                 <label style={S.label}>Batch</label>
-                <select style={S.formInput} value={editP.batch} onChange={e=>{const[sd,di]=batchDateMap[e.target.value];setEditP(p=>({...p,batch:e.target.value,scheduled_date:sd,date_iso:di}));}}>
+                <select style={S.formInput} value={editP.batch} onChange={e=>{const[sd,di]=batchDateMap[cycle][e.target.value];setEditP(p=>({...p,batch:e.target.value,scheduled_date:sd,date_iso:di}));}}>
                   {['Batch 1','Batch 2','Batch 3','Batch 4','Batch 5'].map(b=><option key={b}>{b}</option>)}
                 </select>
               </div>
@@ -340,7 +375,7 @@ export default function Admin() {
               ))}
               <div style={S.formRow}>
                 <label style={S.label}>Batch</label>
-                <select style={S.formInput} value={newP.batch} onChange={e=>{const[sd,di]=batchDateMap[e.target.value];setNewP(p=>({...p,batch:e.target.value,scheduled_date:sd,date_iso:di}));}}>
+                <select style={S.formInput} value={newP.batch} onChange={e=>{const[sd,di]=batchDateMap[cycle][e.target.value];setNewP(p=>({...p,batch:e.target.value,scheduled_date:sd,date_iso:di}));}}>
                   {['Batch 1','Batch 2','Batch 3','Batch 4','Batch 5'].map(b=><option key={b}>{b}</option>)}
                 </select>
               </div>
