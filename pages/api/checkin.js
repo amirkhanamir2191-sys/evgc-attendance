@@ -2,7 +2,7 @@ import { supabase, supabaseAdmin } from '../../lib/supabase';
 
 const OFFICE_LAT = 28.6683203;
 const OFFICE_LON = 77.2238452;
-const RADIUS_METERS = 150;
+const RADIUS_METERS = 200;
 const CURRENT_CYCLE = 2;
 
 function getDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -33,8 +33,8 @@ export default async function handler(req, res) {
   const clientIp = getClientIp(req);
 
   try {
-    const { data: byEvgc } = await supabase.from('participants').select('*').eq('evgc_id', loginId);
-    const { data: bySchool } = await supabase.from('participants').select('*').eq('school_id', loginId);
+    const { data: byEvgc } = await supabase.from('participants').select('*').eq('evgc_id', loginId).eq('cycle', CURRENT_CYCLE);
+    const { data: bySchool } = await supabase.from('participants').select('*').eq('school_id', loginId).eq('cycle', CURRENT_CYCLE);
     const seen = new Set();
     const matches = [...(byEvgc||[]), ...(bySchool||[])].filter(p => { if(seen.has(p.id)) return false; seen.add(p.id); return true; });
 

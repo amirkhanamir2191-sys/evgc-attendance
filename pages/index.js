@@ -46,8 +46,14 @@ export default function Home() {
         else { setMsg(data.message, 'error'); }
       } catch { setMsg('Could not reach the server.', 'error'); }
       finally { setLoading(false); }
-    }, () => { setMsg('Location denied. Please allow location access.', 'error'); setLoading(false); },
-    { enableHighAccuracy: true, timeout: 15000 });
+    }, (err) => {
+      const msg = err.code === 1
+        ? 'Location access denied. Please tap the lock icon in your browser and allow location, then try again.'
+        : err.code === 3
+        ? 'Location timed out. Please try again in an open area or enable Wi-Fi for better GPS.'
+        : 'Could not get location. Please ensure location is enabled and try again.';
+      setMsg(msg, 'error'); setLoading(false);
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
   }
 
   function startOver() {
