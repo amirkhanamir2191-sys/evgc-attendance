@@ -43,5 +43,34 @@ export default async function handler(req, res) {
     return res.json({ success: true });
   }
 
+  // Admin manual check-in: creates attendance record for a participant
+  if (req.method === 'POST') {
+    const { evgc_id, school_id, name, district, zone, school_name, batch, email, cycle: bodyCycle } = req.body;
+    if (!name) return res.status(400).json({ success: false, message: 'Missing name' });
+    const useCycle = bodyCycle ? parseInt(bodyCycle) : CURRENT_CYCLE;
+    const now = new Date().toISOString();
+    const { data, error } = await supabaseAdmin.from('attendance').insert({
+      evgc_id: evgc_id || null,
+      school_id: school_id || null,
+      name, district, zone, school_name, batch,
+      email: email || null,
+      checkin_time: now,
+      checkin_distance_m: 0,
+      checkin_ip: 'admin',
+      cycle: useCycle,
+    }).select().single();
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    return res.json({ success: true, data });
+  }
+
+  // Admin edit / mark checkout
+  if (req.method === 'PUT') {
+    const { id, ...updates } = req.body;
+    if (!id) return res.status(400).json({ success: false, message: 'Missing id' });
+    const { error } = await supabaseAdmin.from('attendance').update(updates).eq('id', id);
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    return res.json({ success: true });
+  }
+
   return res.status(405).json({ success: false, message: 'Method not allowed' });
 }

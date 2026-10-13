@@ -27,6 +27,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState('success');
+  const [todayAttendance, setTodayAttendance] = useState([]);
   const [editA, setEditA] = useState(null);
   const [editP, setEditP] = useState(null);
   const [showAddP, setShowAddP] = useState(false);
@@ -75,10 +76,16 @@ export default function Admin() {
     p.set('cycle', cycle);
     if (batch !== 'all') p.set('batch', batch);
     if (search) p.set('search', search);
-    const r = await fetch('/api/admin/participants?' + p);
-    if (r.status === 401) { setAuthed(false); return; }
-    const d = await r.json();
-    setParticipants(d.data || []); setLoading(false);
+    const [pr, ar] = await Promise.all([
+      fetch('/api/admin/participants?' + p),
+      fetch('/api/admin/attendance?' + new URLSearchParams({ cycle, date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }) })),
+    ]);
+    if (pr.status === 401) { setAuthed(false); return; }
+    const pd = await pr.json();
+    const ad = await ar.json();
+    setParticipants(pd.data || []);
+    setTodayAttendance(ad.data || []);
+    setLoading(false);
   }, [cycle, batch, search]);
 
   useEffect(() => {
@@ -122,6 +129,38 @@ export default function Admin() {
     await fetch('/api/admin/attendance', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id,...updates}) });
     setEditA(null); notify('Updated'); loadAttendance();
   };
+  const adminCheckin = async (p) => {
+    if (!confirm('Check in ' + p.name + ' manually?')) return;
+    const r = await fetch('/api/admin/attendance', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ evgc_id:p.evgc_id, school_id:p.school_id, name:p.name, district:p.district,
+        zone:p.zone, school_name:p.school_name, batch:p.batch, email:null, cycle }) });
+    const d = await r.json();
+    if (d.success) notify('✅ Checked in: ' + p.name);
+    else notify(d.message || 'Error', 'error');
+    loadParticipants();
+  };
+
+  const adminCheckout = async (p) => {
+    if (!confirm('Check out ' + p.name + ' manually?')) return;
+    // Find today's attendance record for this participant
+    const todayISO = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const params = new URLSearchParams({ cycle, date: todayISO });
+    if (p.evgc_id) params.set('search', p.evgc_id);
+    else params.set('search', p.school_id || p.name);
+    const r = await fetch('/api/admin/attendance?' + params);
+    const d = await r.json();
+    const rec = (d.data || []).find(a =>
+      (p.evgc_id && a.evgc_id === p.evgc_id) ||
+      (p.school_id && a.school_id === p.school_id)
+    );
+    if (!rec) { notify('No check-in record found for today', 'error'); return; }
+    if (rec.checkout_time) { notify('Already checked out', 'error'); return; }
+    await fetch('/api/admin/attendance', { method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id: rec.id, checkout_time: new Date().toISOString(), checkout_distance_m: 0 }) });
+    notify('✅ Checked out: ' + p.name);
+    loadParticipants();
+  };
+
   const deleteParticipant = async (id) => {
     if (!confirm('Delete participant?')) return;
     await fetch('/api/admin/participants?id=' + id, { method:'DELETE' });
@@ -279,25 +318,43 @@ export default function Admin() {
         {tab==='participants' && (
           <div style={S.tableWrap}>
             <table style={S.table}>
-              <thead><tr style={S.thead}>{['Name','EVGC ID','School ID','School','District','Zone','Batch','Post Type',''].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+              <thead><tr style={S.thead}>{['Name','EVGC ID','School ID','School','District','Zone','Batch','Post Type','Today Status','Actions'].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
               <tbody>
-                {participants.map(p => (
-                  <tr key={p.id} style={S.tr}>
-                    <td style={S.td}><strong>{p.name}</strong></td>
-                    <td style={S.td}>{p.evgc_id||'—'}</td>
-                    <td style={S.td}>{p.school_id||'—'}</td>
-                    <td style={{...S.td,maxWidth:160,overflow:'hidden',textOverflow:'ellipsis'}}>{p.school_name}</td>
-                    <td style={S.td}>{p.district}</td>
-                    <td style={S.td}>{p.zone}</td>
-                    <td style={S.td}>{p.batch}</td>
-                    <td style={S.td}>{p.post_type}</td>
-                    <td style={{...S.td,whiteSpace:'nowrap'}}>
-                      <button style={S.editBtn} onClick={()=>setEditP({...p})}>✏ Edit</button>
-                      <button style={S.delBtn} onClick={()=>deleteParticipant(p.id)}>🗑</button>
-                    </td>
-                  </tr>
-                ))}
-                {!participants.length&&<tr><td colSpan={9} style={S.empty}>No records found</td></tr>}
+                {participants.map(p => {
+                  const rec = todayAttendance.find(a =>
+                    (p.evgc_id && a.evgc_id === p.evgc_id) ||
+                    (p.school_id && a.school_id === p.school_id)
+                  );
+                  const isIn = rec && rec.checkin_time;
+                  const isOut = rec && rec.checkout_time;
+                  return (
+                    <tr key={p.id} style={{...S.tr, background: isOut ? '#f0fdf4' : isIn ? '#fffbeb' : 'inherit'}}>
+                      <td style={S.td}><strong>{p.name}</strong></td>
+                      <td style={S.td}>{p.evgc_id||'—'}</td>
+                      <td style={S.td}>{p.school_id||'—'}</td>
+                      <td style={{...S.td,maxWidth:140,overflow:'hidden',textOverflow:'ellipsis'}}>{p.school_name}</td>
+                      <td style={S.td}>{p.district}</td>
+                      <td style={S.td}>{p.zone}</td>
+                      <td style={S.td}>{p.batch}</td>
+                      <td style={S.td}>{p.post_type}</td>
+                      <td style={S.td}>
+                        {isOut
+                          ? <span style={{color:'#7c3aed',fontWeight:700}}>✅ In & Out</span>
+                          : isIn
+                          ? <span style={{color:'#128a3e',fontWeight:700}}>✅ Checked In</span>
+                          : <span style={{color:'#999'}}>—</span>}
+                        {isIn && <div style={{fontSize:11,color:'#888'}}>{fmt(rec.checkin_time)}{isOut ? ' → ' + fmt(rec.checkout_time) : ''}</div>}
+                      </td>
+                      <td style={{...S.td,whiteSpace:'nowrap'}}>
+                        {!isIn && <button style={S.checkinBtn} onClick={()=>adminCheckin(p)}>✅ In</button>}
+                        {isIn && !isOut && <button style={S.checkoutBtn} onClick={()=>adminCheckout(p)}>⏰ Out</button>}
+                        <button style={S.editBtn} onClick={()=>setEditP({...p})}>✏</button>
+                        <button style={S.delBtn} onClick={()=>deleteParticipant(p.id)}>🗑</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!participants.length&&<tr><td colSpan={10} style={S.empty}>No records found</td></tr>}
               </tbody>
             </table>
           </div>
@@ -336,10 +393,46 @@ export default function Admin() {
         </div>
       )}
 
-      {editP && (
+      {editP && (() => {
+        const editRec = todayAttendance.find(a =>
+          (editP.evgc_id && a.evgc_id === editP.evgc_id) ||
+          (editP.school_id && a.school_id === editP.school_id)
+        );
+        const editIsIn = editRec && editRec.checkin_time;
+        const editIsOut = editRec && editRec.checkout_time;
+        return (
         <div style={S.modal}>
           <div style={S.modalBox}>
             <h2 style={S.modalTitle}>Edit Participant</h2>
+
+            {/* Today's Attendance Status */}
+            <div style={{background:editIsOut?'#f0fdf4':editIsIn?'#fffbeb':'#f8fafc',border:'1px solid '+(editIsOut?'#bbf7d0':editIsIn?'#fde68a':'#e2e8f0'),borderRadius:10,padding:'12px 16px',marginBottom:16}}>
+              <div style={{fontSize:12,fontWeight:700,color:'#475569',marginBottom:8,textTransform:'uppercase',letterSpacing:0.5}}>Today's Attendance</div>
+              <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+                <span style={{fontSize:14,fontWeight:600,color:editIsOut?'#7c3aed':editIsIn?'#128a3e':'#94a3b8'}}>
+                  {editIsOut ? '✅ Checked In & Out' : editIsIn ? '✅ Checked In' : '— Not checked in'}
+                </span>
+                {editIsIn && <span style={{fontSize:12,color:'#666'}}>{fmt(editRec.checkin_time)}{editIsOut?' → '+fmt(editRec.checkout_time):''}</span>}
+              </div>
+              <div style={{display:'flex',gap:8,marginTop:10,flexWrap:'wrap'}}>
+                {!editIsIn && (
+                  <button style={{...S.checkinBtn,padding:'6px 14px',fontSize:13}} onClick={async()=>{await adminCheckin(editP);setEditP(null);}}>
+                    ✅ Check In Now
+                  </button>
+                )}
+                {editIsIn && !editIsOut && (
+                  <button style={{...S.checkoutBtn,padding:'6px 14px',fontSize:13}} onClick={async()=>{await adminCheckout(editP);setEditP(null);}}>
+                    ⏰ Check Out Now
+                  </button>
+                )}
+                {editIsIn && !editIsOut && (
+                  <button style={{...S.checkinBtn,padding:'6px 14px',fontSize:13}} onClick={async()=>{await adminCheckin(editP);setEditP(null);}}>
+                    ✅ Re-Check In
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div style={S.grid2}>
               {[['name','Name'],['evgc_id','EVGC ID'],['school_id','School ID'],['school_name','School Name'],['district','District'],['zone','Zone'],['post_type','Post Type']].map(([f,label]) => (
                 <div key={f} style={S.formRow}>
@@ -355,12 +448,13 @@ export default function Admin() {
               </div>
             </div>
             <div style={S.modalBtns}>
-              <button style={S.saveBtn} onClick={saveEditParticipant}>Save</button>
+              <button style={S.saveBtn} onClick={saveEditParticipant}>Save Details</button>
               <button style={S.cancelBtn} onClick={()=>setEditP(null)}>Cancel</button>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {showAddP && (
         <div style={S.modal}>
@@ -420,7 +514,8 @@ const S = {
   td:{padding:'10px 14px',color:'#334155'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8',fontSize:15},
   editBtn:{padding:'3px 8px',background:'#dbeafe',color:'#1d4ed8',border:'none',borderRadius:5,cursor:'pointer',fontSize:11,marginRight:3},
-  checkoutBtn:{padding:'3px 8px',background:'#d1fae5',color:'#065f46',border:'none',borderRadius:5,cursor:'pointer',fontSize:11,marginRight:3},
+  checkinBtn:{padding:'3px 8px',background:'#d1fae5',color:'#065f46',border:'none',borderRadius:5,cursor:'pointer',fontSize:11,marginRight:3,fontWeight:700},
+  checkoutBtn:{padding:'3px 8px',background:'#fef3c7',color:'#92400e',border:'none',borderRadius:5,cursor:'pointer',fontSize:11,marginRight:3,fontWeight:700},
   unmarkBtn:{padding:'3px 8px',background:'#fef3c7',color:'#92400e',border:'none',borderRadius:5,cursor:'pointer',fontSize:11,marginRight:3},
   delBtn:{padding:'3px 8px',background:'#fee2e2',color:'#b91c1c',border:'none',borderRadius:5,cursor:'pointer',fontSize:11},
   modal:{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16},
