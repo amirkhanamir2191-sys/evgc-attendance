@@ -21,7 +21,7 @@ export default function Admin() {
   const [attendance, setAttendance] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [batch, setBatch] = useState('all');
-  const [cycle, setCycle] = useState(1);
+  const [cycle, setCycle] = useState(2);
   const [date, setDate] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,7 +31,7 @@ export default function Admin() {
   const [editA, setEditA] = useState(null);
   const [editP, setEditP] = useState(null);
   const [showAddP, setShowAddP] = useState(false);
-  const [newP, setNewP] = useState({evgc_id:'',name:'',district:'',zone:'',post_type:'',school_id:'',school_name:'',batch:'Batch 1',scheduled_date:'15th September 2026',date_iso:'2026-09-15'});
+  const [newP, setNewP] = useState({evgc_id:'',name:'',district:'',zone:'',post_type:'',school_id:'',school_name:'',batch:'Batch 1',scheduled_date:'12th October 2026',date_iso:'2026-10-12'});
 
   // Check auth status on load
   useEffect(() => {
